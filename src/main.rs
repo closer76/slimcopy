@@ -1,27 +1,19 @@
-mod ruleset;
 mod ignore_file;
+mod app_options;
+mod ruleset;
 
-use std::{fs, path::Path};
-use clap::clap_app;
-use anyhow::{Result, bail};
+use anyhow::{Result, Context};
+use app_options::AppOptions;
+use ignore_file::IgnoreFile;
+use std::path::Path;
 
 fn main() -> Result<()> {
-    let matches = clap_app!(my_app =>
-        (version: "0.8")
-        (author: "Kenneth Lo <closer.tw@gmail.com>")
-        (@arg SRC: -s --src +required +takes_value "Source directory")
-        (@arg DEST: -d --dest +takes_value "Destination directory")
-        (@arg IGNORE_FILE: -i --ignore_file +takes_value "Reference ignored file")
-    ).get_matches();
+    let options = AppOptions::from_args()?;
 
-    let src_path = Path::new(matches.value_of("SRC").unwrap());
-    let ignore_file = match matches.value_of("IGNORE_FILE") {
-        Some(value) => {
-            ignore_file::IgnoreFile::new(src_path, Path::new(value))?
-        }
-        _ => bail!("Ignore file does not exist!"),
-    };
-    traverse_dir(src_path, &ignore_file)
+    let ignore_file = IgnoreFile::new(options.src.as_path(), options.ignore_file.as_path())
+        .context("Ignore file syntax error.")?;
+
+    traverse_dir(options.src.as_path(), &ignore_file)
 }
 
 fn traverse_dir(path: &Path, ignore_file: &ignore_file::IgnoreFile) -> Result<()> {
