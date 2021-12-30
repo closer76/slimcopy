@@ -12,27 +12,36 @@ use std::path::{Path, PathBuf};
 pub struct RuleSet {
     root: PathBuf,
     pub(crate) rules: Vec<Rule>,
-    tester: GlobSet
+    tester: GlobSet,
 }
 
 impl RuleSet {
     /// Construct a ruleset, given a path that is the root of the repository, and a set of rules,
     /// which is a vector
     pub fn new<'a, P, I, S>(root: P, raw_rules: I) -> Result<RuleSet>
-        where P: AsRef<Path>, I: IntoIterator<Item = &'a S>, S: AsRef<str> + 'a {
-         // FIXME: Is there a better way without needing to hardcode a path here?
+    where
+        P: AsRef<Path>,
+        I: IntoIterator<Item = &'a S>,
+        S: AsRef<str> + 'a,
+    {
+        // FIXME: Is there a better way without needing to hardcode a path here?
         let cleaned_root = Self::strip_prefix(root, Path::new("./"));
 
-        let lines =
-            raw_rules.into_iter().map(RuleSet::parse_line).collect::<Result<Vec<ParsedLine>>>()?;
+        let lines = raw_rules
+            .into_iter()
+            .map(RuleSet::parse_line)
+            .collect::<Result<Vec<ParsedLine>>>()?;
 
-        let rules: Vec<Rule> = lines.iter().filter_map(|parsed_line| {
-            match parsed_line {
-                // FIXME: Remove this clone if possible, it's rank.
-                &ParsedLine::WithRule(ref rule) => Some(rule.clone()),
-                _ => None
-            }
-        }).collect();
+        let rules: Vec<Rule> = lines
+            .iter()
+            .filter_map(|parsed_line| {
+                match parsed_line {
+                    // FIXME: Remove this clone if possible, it's rank.
+                    &ParsedLine::WithRule(ref rule) => Some(rule.clone()),
+                    _ => None,
+                }
+            })
+            .collect();
 
         let mut tester_builder = GlobSetBuilder::new();
 
@@ -49,7 +58,7 @@ impl RuleSet {
         Ok(RuleSet {
             root: cleaned_root,
             rules,
-            tester
+            tester,
         })
     }
 
@@ -71,7 +80,7 @@ impl RuleSet {
                 continue;
             }
 
-            return !rule.negation
+            return !rule.negation;
         }
 
         false
@@ -126,14 +135,17 @@ impl RuleSet {
             pattern: cleaned_pattern, // FIXME: This is not zero-copy.
             anchored,
             dir_only,
-            negation
+            negation,
         }))
     }
 
     /// Given a path and a prefix, strip the prefix off the path. If the path does not begin with
     /// the given prefix, then return the path as is.
     fn strip_prefix<P: AsRef<Path>, PR: AsRef<Path>>(path: P, prefix: PR) -> PathBuf {
-        path.as_ref().strip_prefix(prefix.as_ref()).unwrap_or(path.as_ref()).to_path_buf()
+        path.as_ref()
+            .strip_prefix(prefix.as_ref())
+            .unwrap_or(path.as_ref())
+            .to_path_buf()
     }
 }
 
@@ -148,19 +160,19 @@ pub(crate) struct Rule {
     pub dir_only: bool,
     /// Whether the rule should, if it matches, negate any previously matching
     /// patterns. This flag has no effect if no previous patterns had matched.
-    pub negation: bool
+    pub negation: bool,
 }
 
 enum ParsedLine {
     Empty,
     Comment,
-    WithRule(Rule)
+    WithRule(Rule),
 }
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
     use super::RuleSet;
+    use std::path::Path;
 
     fn ruleset_from_rules<P: AsRef<Path>, S: AsRef<str>>(root: P, raw_rules: S) -> RuleSet {
         let rules: Vec<String> = raw_rules.as_ref().lines().map(|s| s.to_string()).collect();
@@ -238,15 +250,19 @@ mod test {
     not_ignored!(ignot11, ROOT, "#foo", "#foo");
     not_ignored!(ignot12, ROOT, "\n\n\n", "foo");
     not_ignored!(ignot13, ROOT, "foo/**", "foo", true);
-    not_ignored!(ignot14, "./third_party/protobuf", "m4/ltoptions.m4",
-        "./third_party/protobuf/csharp/src/packages/repositories.config");
+    not_ignored!(
+        ignot14,
+        "./third_party/protobuf",
+        "m4/ltoptions.m4",
+        "./third_party/protobuf/csharp/src/packages/repositories.config"
+    );
     not_ignored!(ignot15, ROOT, "!/bar", "foo/bar");
 }
 
 #[cfg(all(test, feature = "benchmarks"))]
 mod benchmark {
-    use std::path::Path;
     use super::RuleSet;
+    use std::path::Path;
     use test::Bencher;
 
     const ROOT: &'static str = "/home/test/some/repo";

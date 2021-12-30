@@ -1,12 +1,12 @@
-mod ignore_file;
 mod app_options;
+mod ignore_file;
 mod ruleset;
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use app_options::AppOptions;
 use ignore_file::IgnoreFile;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 fn main() -> Result<()> {
     let options = AppOptions::from_args()?;
@@ -49,7 +49,7 @@ fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
             let mut permission = dest_meta.permissions();
             if permission.readonly() {
                 permission.set_readonly(false);
-                fs::set_permissions(&dest_path, permission)?;    
+                fs::set_permissions(&dest_path, permission)?;
             }
         } else if !dest_dir.exists() {
             fs::create_dir_all(&dest_dir)

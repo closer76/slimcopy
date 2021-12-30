@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 pub struct IgnoreFile {
-    ruleset: RuleSet
+    ruleset: RuleSet,
 }
 
 /// Given a single specific gitignore style file, allow matching against
@@ -15,12 +15,13 @@ pub struct IgnoreFile {
 impl IgnoreFile {
     pub fn new<P: AsRef<Path>, P2: AsRef<Path>>(root: P, path: P2) -> Result<IgnoreFile> {
         let file = File::open(path)?;
-        let lines: Vec<String> = BufReader::new(file).lines().flat_map(|line| line.ok()).collect();
+        let lines: Vec<String> = BufReader::new(file)
+            .lines()
+            .flat_map(|line| line.ok())
+            .collect();
         let rule_set = RuleSet::new(root, lines.as_slice())?;
 
-        Ok(IgnoreFile {
-          ruleset: rule_set
-        })
+        Ok(IgnoreFile { ruleset: rule_set })
     }
 
     pub fn is_ignored<P: AsRef<Path>>(&self, path: P, is_dir: bool) -> bool {
@@ -34,15 +35,13 @@ mod test {
     use std::path::PathBuf;
 
     macro_rules! ignore_file_from_test_repo {
-        ($ignore_path:expr) => {
-            {
-                let cargo_root: PathBuf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-                let root: PathBuf = cargo_root.join("tests/resources/fake_repo").to_path_buf();
-                let ignore: PathBuf = root.join($ignore_path).to_path_buf();
+        ($ignore_path:expr) => {{
+            let cargo_root: PathBuf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+            let root: PathBuf = cargo_root.join("tests/resources/fake_repo").to_path_buf();
+            let ignore: PathBuf = root.join($ignore_path).to_path_buf();
 
-                IgnoreFile::new(root, ignore).unwrap()
-            }
-        };
+            IgnoreFile::new(root, ignore).unwrap()
+        }};
     }
 
     fn ruleset_from_rules<S: AsRef<str>>(raw_rules: S) -> RuleSet {
@@ -66,6 +65,9 @@ mod test {
     fn returns_correctly_an_ignorefile_from_valid_file() {
         let file = ignore_file_from_test_repo!(".gitignore");
 
-        assert_eq!(file.ruleset.rules, ruleset_from_rules("*.no\nnot_me_either/\n/or_even_me").rules)
+        assert_eq!(
+            file.ruleset.rules,
+            ruleset_from_rules("*.no\nnot_me_either/\n/or_even_me").rules
+        )
     }
 }

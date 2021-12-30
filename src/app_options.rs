@@ -1,4 +1,4 @@
-use anyhow::{bail, Result, Context};
+use anyhow::{bail, Context, Result};
 use clap::{clap_app, crate_version};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -20,20 +20,23 @@ impl AppOptions {
         )
         .get_matches();
 
-        let src = PathBuf::from_str(matches.value_of("SRC")
-            .unwrap())?
-            .canonicalize().context("Source does not exist.")?;
+        let src = PathBuf::from_str(matches.value_of("SRC").unwrap())?
+            .canonicalize()
+            .context("Source does not exist.")?;
         if !src.is_dir() {
             bail!("Source must be a directory.");
         }
 
-        let dest = PathBuf::from_str(matches.value_of("DEST")
-            .unwrap())?;
+        let dest = PathBuf::from_str(matches.value_of("DEST").unwrap())?;
         if !dest.exists() {
             if let Some(true) = dest.parent().map(|parent| parent.exists()) {
                 // create directory
-                std::fs::create_dir(&dest)
-                    .with_context(|| format!("Failed to create destination directory \"{}\"", dest.display()))?;
+                std::fs::create_dir(&dest).with_context(|| {
+                    format!(
+                        "Failed to create destination directory \"{}\"",
+                        dest.display()
+                    )
+                })?;
             } else {
                 bail!("Destination does not exist.");
             }
@@ -56,6 +59,10 @@ impl AppOptions {
         }
         println!("Ignore file = {}", ignore_file.display());
 
-        Ok(AppOptions {src, dest, ignore_file})
+        Ok(AppOptions {
+            src,
+            dest,
+            ignore_file,
+        })
     }
 }
