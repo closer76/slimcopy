@@ -23,10 +23,24 @@ impl AppOptions {
         let src = PathBuf::from_str(matches.value_of("SRC")
             .unwrap())?
             .canonicalize().context("Source does not exist.")?;
+        if !src.is_dir() {
+            bail!("Source must be a directory.");
+        }
 
         let dest = PathBuf::from_str(matches.value_of("DEST")
-            .unwrap())?
-            .canonicalize().context("Destination does not exist.")?;
+            .unwrap())?;
+        if !dest.exists() {
+            if let Some(true) = dest.parent().map(|parent| parent.exists()) {
+                // create directory
+                std::fs::create_dir(&dest)
+                    .with_context(|| format!("Failed to create destination directory \"{}\"", dest.display()))?;
+            } else {
+                bail!("Destination does not exist.");
+            }
+        } else if !dest.is_dir() {
+            bail!("Destination must be a directory.");
+        }
+        let dest = dest.canonicalize()?;
 
         let ignore_file = match matches.value_of("IGNORE_FILE") {
             Some(value) => PathBuf::from_str(value)?,
