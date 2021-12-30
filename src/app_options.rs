@@ -14,8 +14,8 @@ impl AppOptions {
         let matches = clap_app!(my_app =>
             (version: crate_version!())
             (author: "Kenneth Lo <closer.tw@gmail.com>")
-            (@arg SRC: -s --src +required +takes_value "Source directory")
-            (@arg DEST: -d --dest +required +takes_value "Destination directory")
+            (@arg SRC: +required +takes_value "Source directory")
+            (@arg DEST: +required +takes_value "Destination directory")
             (@arg IGNORE_FILE: -i --ignore_file +takes_value "Reference ignored file")
         )
         .get_matches();
