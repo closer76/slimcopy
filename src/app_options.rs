@@ -7,6 +7,7 @@ pub struct AppOptions {
     pub src: PathBuf,
     pub dest: PathBuf,
     pub ignore_file: PathBuf,
+    pub force_copy: bool,
 }
 
 impl AppOptions {
@@ -16,7 +17,8 @@ impl AppOptions {
             (author: "Kenneth Lo <closer.tw@gmail.com>")
             (@arg SRC: +required +takes_value "Source directory")
             (@arg DEST: +required +takes_value "Destination directory")
-            (@arg IGNORE_FILE: -i --ignore_file +takes_value "Reference ignored file")
+            (@arg IGNORE_FILE: -i --("ignore-file") +takes_value "Reference ignored file")
+            (@arg FORCE_COPY: -f --("force-copy") "Force")
         )
         .get_matches();
 
@@ -63,6 +65,7 @@ impl AppOptions {
             src,
             dest,
             ignore_file,
+            force_copy: matches.is_present("FORCE_COPY"),
         })
     }
 }

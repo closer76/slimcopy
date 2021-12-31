@@ -38,11 +38,23 @@ fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
         println!("Skip symbolic link \"{}\"", src_path.display());
         // let link_target = src_path.read_link()?;
         // std::os::windows::fs::symlink_dir(link_target, dest_path)?;
+        Ok(())
     } else {
         let dest_path = options.dest.join(src_path.strip_prefix(&options.src)?);
         let dest_dir = dest_path.parent().unwrap();
         if dest_path.exists() {
             let dest_meta = fs::metadata(&dest_path)?;
+
+            // If force-copy is not set, copy only newer files
+            if !options.force_copy {
+                match (src_meta.modified(), dest_meta.modified()) {
+                    (Ok(src_time), Ok(dest_time)) if src_time > dest_time => (),
+                    _ => {
+                        println!("No update: {}", src_path.display());
+                        return Ok(());
+                    }
+                };
+            }
 
             // Remove read-only attribute before overwriting existing file
             let mut permission = dest_meta.permissions();
@@ -54,8 +66,10 @@ fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
             fs::create_dir_all(&dest_dir)
                 .with_context(|| format!("Cannot create directory \"{}\"", dest_dir.display()))?;
         }
+
         fs::copy(&src_path, &dest_path)
-            .with_context(|| format!("Failed to copy file to \"{}\"", dest_path.display()))?;
+            .with_context(|| format!("Failed to copy file to \"{}\"", dest_path.display()))
+            // We don't need u64 returned from fs::copy(), so dispose it.
+            .map(|_| ())
     }
-    Ok(())
 }
