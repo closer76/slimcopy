@@ -24,16 +24,15 @@ fn main() -> Result<()> {
     traverse_dir(src_path, &ignore_file)
 }
 
-fn traverse_dir(root: &Path, ignore_file: &ignore_file::IgnoreFile) -> Result<()> {
-    if root.is_dir() {
-        for entry in root.read_dir()? {
-            let entry_name = entry?.path();
-            if ignore_file.is_ignored(entry_name.as_path(), entry_name.is_dir()) {
-                println!("{}", entry_name.display());
-            } else if entry_name.is_dir() {
-                traverse_dir(entry_name.as_path(), ignore_file)?;
-            }
+fn traverse_dir(path: &Path, ignore_file: &ignore_file::IgnoreFile) -> Result<()> {
+    if ignore_file.is_ignored(path, path.is_dir()) {
+        println!("Skip {}", path.display());
+    } else if path.is_dir() {
+        for entry in path.read_dir()? {
+            traverse_dir(entry?.path().as_path(), ignore_file)?;
         }
+    } else {
+        // TODO: copy
     }
 
     Ok(())
