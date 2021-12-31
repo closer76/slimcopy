@@ -20,15 +20,14 @@ fn main() -> Result<()> {
 fn traverse_dir(path: &Path, ignore_file: &IgnoreFile, options: &AppOptions) -> Result<()> {
     if ignore_file.is_ignored(path, path.is_dir()) {
         println!("Skip {}", path.display());
+        Ok(())
     } else if path.is_dir() {
-        for entry in path.read_dir()? {
-            traverse_dir(entry?.path().as_path(), ignore_file, options)?;
-        }
+        path.read_dir()?
+            .map(|entry| traverse_dir(entry?.path().as_path(), ignore_file, options))
+            .collect::<Result<()>>()
     } else {
-        copy_file(path, &options)?;
+        copy_file(path, &options)
     }
-
-    Ok(())
 }
 
 fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
