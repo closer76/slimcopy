@@ -5,6 +5,7 @@ mod type_counter;
 
 use anyhow::{Context, Result};
 use app_options::AppOptions;
+use fs_extra::dir::get_size;
 use ignore_file::IgnoreFile;
 use std::fs;
 use std::path::Path;
@@ -16,30 +17,35 @@ fn main() -> Result<()> {
     let ignore_file = IgnoreFile::new(options.src.as_path(), options.ignore_file.as_path())
         .context("Ignore file syntax error.")?;
 
-    let count = traverse_dir(options.src.as_path(), &ignore_file, &options, TypeCounter::new())?;
+    let count = traverse_dir(options.src.as_path(), &ignore_file, &options)?;
 
     println!("{:?}", count);
 
     Ok(())
 }
 
-fn traverse_dir(path: &Path, ignore_file: &IgnoreFile, options: &AppOptions, counter: TypeCounter) -> Result<TypeCounter> {
+fn traverse_dir(
+    path: &Path,
+    ignore_file: &IgnoreFile,
+    options: &AppOptions,
+) -> Result<TypeCounter> {
     if ignore_file.is_ignored(path, path.is_dir()) {
         println!("Skip {}", path.display());
-        Ok(counter.count_skipped())
+        let counter = TypeCounter::new();
+        Ok(counter.count_skipped(get_size(path).unwrap_or(0)))
     } else if path.is_dir() {
         path.read_dir()?
-            .map(|entry| traverse_dir(entry?.path().as_path(), ignore_file, options, counter))
+            .map(|entry| traverse_dir(entry?.path().as_path(), ignore_file, options))
             .collect::<Result<Vec<TypeCounter>>>()
             .map(|v| v.iter().sum())
     } else {
-        copy_file(path, &options, counter)
+        copy_file(path, &options)
     }
 }
 
-fn copy_file(src_path: &Path, options: &AppOptions, counter: TypeCounter) -> Result<TypeCounter> {
+fn copy_file(src_path: &Path, options: &AppOptions) -> Result<TypeCounter> {
     let src_meta = src_path.symlink_metadata()?;
-
+    let counter = TypeCounter::new();
     if src_meta.file_type().is_symlink() {
         // TODO: There should be better ways to handle symbolic links...
         println!("Skip symbolic link \"{}\"", src_path.display());
@@ -58,7 +64,7 @@ fn copy_file(src_path: &Path, options: &AppOptions, counter: TypeCounter) -> Res
                     (Ok(src_time), Ok(dest_time)) if src_time > dest_time => (),
                     _ => {
                         println!("No update: {}", src_path.display());
-                        return Ok(counter.count_no_update());
+                        return Ok(counter.count_no_update(get_size(src_path).unwrap_or(0)));
                     }
                 };
             }
@@ -76,7 +82,6 @@ fn copy_file(src_path: &Path, options: &AppOptions, counter: TypeCounter) -> Res
 
         fs::copy(&src_path, &dest_path)
             .with_context(|| format!("Failed to copy file to \"{}\"", dest_path.display()))
-            // We don't need u64 returned from fs::copy(), so dispose it.
-            .map(|_| counter.count_copied())
+            .map(|size| counter.count_copied(size))
     }
 }
