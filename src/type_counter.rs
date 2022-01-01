@@ -1,3 +1,5 @@
+use size_format::SizeFormatterBinary;
+use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::Add;
 
@@ -76,5 +78,24 @@ impl<'a> Add<&'a TypeCounter> for TypeCounter {
 impl<'a> Sum<&'a TypeCounter> for TypeCounter {
     fn sum<I: Iterator<Item = &'a TypeCounter>>(iter: I) -> Self {
         iter.fold(TypeCounter::new(), |accu, item| accu + item)
+    }
+}
+
+impl Display for TypeCounter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:>6} file(s) copied,      size = {:>8}B
+{:>6} file(s) not updated, size = {:>8}B
+{:>6} item(s) skipped,     size = {:>8}B
+{:>6} symbolic link(s)",
+            self.copied,
+            SizeFormatterBinary::new(self.copied_size),
+            self.no_update,
+            SizeFormatterBinary::new(self.no_update_size),
+            self.skipped,
+            SizeFormatterBinary::new(self.skipped_size),
+            self.symlink
+        )
     }
 }

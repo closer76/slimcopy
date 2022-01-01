@@ -19,7 +19,7 @@ fn main() -> Result<()> {
 
     let count = traverse_dir(options.src.as_path(), &ignore_file, &options)?;
 
-    println!("{:?}", count);
+    println!("{}", count);
 
     Ok(())
 }
