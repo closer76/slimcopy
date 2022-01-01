@@ -1,12 +1,14 @@
 mod app_options;
 mod ignore_file;
 mod ruleset;
+mod type_counter;
 
 use anyhow::{Context, Result};
 use app_options::AppOptions;
 use ignore_file::IgnoreFile;
 use std::fs;
 use std::path::Path;
+use type_counter::TypeCounter;
 
 fn main() -> Result<()> {
     let options = AppOptions::from_args()?;
@@ -14,23 +16,28 @@ fn main() -> Result<()> {
     let ignore_file = IgnoreFile::new(options.src.as_path(), options.ignore_file.as_path())
         .context("Ignore file syntax error.")?;
 
-    traverse_dir(options.src.as_path(), &ignore_file, &options)
+    let count = traverse_dir(options.src.as_path(), &ignore_file, &options, TypeCounter::new())?;
+
+    println!("{:?}", count);
+
+    Ok(())
 }
 
-fn traverse_dir(path: &Path, ignore_file: &IgnoreFile, options: &AppOptions) -> Result<()> {
+fn traverse_dir(path: &Path, ignore_file: &IgnoreFile, options: &AppOptions, counter: TypeCounter) -> Result<TypeCounter> {
     if ignore_file.is_ignored(path, path.is_dir()) {
         println!("Skip {}", path.display());
-        Ok(())
+        Ok(counter.count_skipped())
     } else if path.is_dir() {
         path.read_dir()?
-            .map(|entry| traverse_dir(entry?.path().as_path(), ignore_file, options))
-            .collect::<Result<()>>()
+            .map(|entry| traverse_dir(entry?.path().as_path(), ignore_file, options, counter))
+            .collect::<Result<Vec<TypeCounter>>>()
+            .map(|v| v.iter().sum())
     } else {
-        copy_file(path, &options)
+        copy_file(path, &options, counter)
     }
 }
 
-fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
+fn copy_file(src_path: &Path, options: &AppOptions, counter: TypeCounter) -> Result<TypeCounter> {
     let src_meta = src_path.symlink_metadata()?;
 
     if src_meta.file_type().is_symlink() {
@@ -38,7 +45,7 @@ fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
         println!("Skip symbolic link \"{}\"", src_path.display());
         // let link_target = src_path.read_link()?;
         // std::os::windows::fs::symlink_dir(link_target, dest_path)?;
-        Ok(())
+        Ok(counter.count_symlink())
     } else {
         let dest_path = options.dest.join(src_path.strip_prefix(&options.src)?);
         let dest_dir = dest_path.parent().unwrap();
@@ -51,7 +58,7 @@ fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
                     (Ok(src_time), Ok(dest_time)) if src_time > dest_time => (),
                     _ => {
                         println!("No update: {}", src_path.display());
-                        return Ok(());
+                        return Ok(counter.count_no_update());
                     }
                 };
             }
@@ -70,6 +77,6 @@ fn copy_file(src_path: &Path, options: &AppOptions) -> Result<()> {
         fs::copy(&src_path, &dest_path)
             .with_context(|| format!("Failed to copy file to \"{}\"", dest_path.display()))
             // We don't need u64 returned from fs::copy(), so dispose it.
-            .map(|_| ())
+            .map(|_| counter.count_copied())
     }
 }
