@@ -7,5 +7,5 @@ fn main() -> Result<()> {
     let app = MyApp::new()?;
     let count = app.run()?;
 
-    Ok(println!("{}", count))
+    Ok(println!("\n{}", count))
 }

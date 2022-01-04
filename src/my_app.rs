@@ -2,20 +2,24 @@ mod app_options;
 mod ignore_file;
 mod logger;
 mod type_counter;
+mod working_indicator;
 
 use anyhow::{Context, Result};
 use fs_extra::dir::get_size;
+use std::cell::RefCell;
 use std::fs;
 use std::path::Path;
 use app_options::AppOptions;
 use ignore_file::IgnoreFile;
 use logger::Logger;
 use type_counter::TypeCounter;
+use working_indicator::WorkingIndicator;
 
 pub struct MyApp {
     options: AppOptions,
     ignore_file: IgnoreFile,
     log: Logger,
+    working: RefCell<WorkingIndicator>,
 }
 
 impl MyApp {
@@ -30,14 +34,20 @@ impl MyApp {
             _ => Logger::new(true),
         };
 
-        Ok(MyApp {options, ignore_file, log})
+        let working = RefCell::new(WorkingIndicator::new());
+
+        Ok(MyApp {options, ignore_file, log, working})
     }
 
     pub fn run(&self) -> Result<TypeCounter> {
-        self.traverse_tree(&self.options.src)
+        self.working.borrow_mut().init();
+        let result = self.traverse_tree(&self.options.src);
+        self.working.borrow().done();
+        result
     }
 
     fn traverse_tree(&self, path: &Path) -> Result<TypeCounter> {
+        self.working.borrow_mut().update();
         if self.ignore_file.is_ignored(path, path.is_dir()) {
             self.log.add(format!("Skip {}", path.display()).as_str());
             let counter = TypeCounter::new();
