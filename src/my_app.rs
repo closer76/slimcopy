@@ -1,11 +1,16 @@
+mod app_options;
+mod ignore_file;
+mod logger;
+mod type_counter;
+
 use anyhow::{Context, Result};
 use fs_extra::dir::get_size;
 use std::fs;
 use std::path::Path;
-use super::app_options::AppOptions;
-use super::ignore_file::IgnoreFile;
-use super::logger::Logger;
-use super::type_counter::TypeCounter;
+use app_options::AppOptions;
+use ignore_file::IgnoreFile;
+use logger::Logger;
+use type_counter::TypeCounter;
 
 pub struct MyApp {
     options: AppOptions,

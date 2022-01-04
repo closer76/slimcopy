@@ -1,5 +1,7 @@
 // source from https://github.com/nathankleyn/gitignore.rs/commit/5e734ff842c9abde34137245e18ab51084fdc6b9
-use crate::ruleset::*;
+mod ruleset;
+
+use ruleset::*;
 use anyhow::Result;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
