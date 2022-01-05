@@ -6,6 +6,8 @@ pub struct WorkingIndicator {
     last_percentage: u64,
 }
 
+const BACKSPACE: &str = "\u{0008}";
+
 impl WorkingIndicator {
     pub fn new(max: u64) -> Self {
         WorkingIndicator {
@@ -25,13 +27,13 @@ impl WorkingIndicator {
         let new_percentage = self.step * 100 / self.max_step;
         if new_percentage != self.last_percentage {
             self.last_percentage = new_percentage;
-            print!("\u{0008}\u{0008}\u{0008}\u{0008}");
+            print!("{}", BACKSPACE.repeat(4));
             self.draw();
         }
     }
 
     pub fn done(&self) {
-        println!("\u{0008}\u{0008}\u{0008}\u{0008}Done."); // u0008 == backspace
+        println!("{}Done.", BACKSPACE.repeat(4));
     }
 
     fn draw(&self) {
