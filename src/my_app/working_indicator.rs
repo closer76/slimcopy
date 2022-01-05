@@ -1,46 +1,41 @@
-use std::{time::Instant, io::Write};
+use std::io::Write;
 
 pub struct WorkingIndicator {
-    index: usize,
-    last_update: Instant,
+    max_step: u64,
+    step: u64,
+    last_percentage: u64,
 }
 
 impl WorkingIndicator {
-    pub fn new() -> Self {
+    pub fn new(max: u64) -> Self {
         WorkingIndicator {
-            index: 0,
-            last_update: Instant::now(),
+            max_step: max,
+            step: 0,
+            last_percentage: 0,
         }
     }
 
     pub fn init(&mut self) {
-        self.last_update = Instant::now();
         print!("Processing....");
         self.draw();
     }
 
-    pub fn update(&mut self) {
-        let now = Instant::now();
-        if now.duration_since(self.last_update).as_millis() > 250 {
-            self.index = (self.index + 1) % 4;
-            self.last_update = now;
-            print!("{}", '\u{0008}');   // u0008 == backspace
+    pub fn update(&mut self, step: u64) {
+        self.step += step;
+        let new_percentage = self.step * 100 / self.max_step;
+        if new_percentage != self.last_percentage {
+            self.last_percentage = new_percentage;
+            print!("\u{0008}\u{0008}\u{0008}\u{0008}");
             self.draw();
         }
     }
 
     pub fn done(&self) {
-        println!("{}Done.", '\u{0008}');   // u0008 == backspace        
+        println!("\u{0008}\u{0008}\u{0008}\u{0008}Done."); // u0008 == backspace
     }
 
     fn draw(&self) {
-        let c = match self.index {
-            1 => '\\',
-            2 => '|',
-            3 => '/',
-            _ => '-',
-        };
-        print!("{}", c);
+        print!("{:>3}%", self.last_percentage);
         let _ = std::io::stdout().flush();
     }
 }

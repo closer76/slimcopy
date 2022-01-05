@@ -35,9 +35,9 @@ impl TypeCounter {
         }
     }
 
-    pub fn count_skipped(self, size: u64) -> Self {
+    pub fn count_skipped(self, count: u64, size: u64) -> Self {
         Self {
-            skipped: self.skipped + 1,
+            skipped: self.skipped + count,
             skipped_size: self.skipped_size + size,
             ..self
         }

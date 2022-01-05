@@ -1,8 +1,8 @@
 // source from https://github.com/nathankleyn/gitignore.rs/commit/5e734ff842c9abde34137245e18ab51084fdc6b9
 mod ruleset;
 
-use ruleset::*;
 use anyhow::Result;
+use ruleset::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
