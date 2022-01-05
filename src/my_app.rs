@@ -26,6 +26,13 @@ pub struct MyApp {
     progress: RefCell<WorkingIndicator>,
 }
 
+fn is_symlink<P: AsRef<Path>>(path: P) -> bool {
+    path.as_ref()
+        .symlink_metadata()
+        .map(|meta| meta.file_type().is_symlink())
+        .unwrap_or(false)
+}
+
 impl MyApp {
     pub fn new() -> Result<Self> {
         let options = AppOptions::from_args()?;
@@ -87,22 +94,21 @@ impl MyApp {
                     (map, count, size)
                 })
         } else {
-            // Size calculation is time-consuming, so it's skipped here.
-            // If you really want to pre-calculates the sizes of directories,
-            // use this line to replace the next:
-            // ```
-            // Ok(HashMap::new(), 1, Info::File(get_size(item).unwrap_or(0)))
-            // ```
-            Ok((HashMap::new(), 1, 0))
+            Ok((HashMap::new(), 1, get_size(item).unwrap_or(0)))
         }
     }
 
     fn traverse_tree(&self, path: &Path) -> Result<TypeCounter> {
         if self.ignore_file.is_ignored(path, path.is_dir()) {
-            let file_count = self.db.get(&path.to_path_buf()).unwrap_or(&(0, 0)).0;
+            let (file_count, size) = if is_symlink(path) {
+                (0, 0)
+            } else if path.is_dir() {
+                *self.db.get(&path.to_path_buf()).unwrap_or(&(0, 0))
+            } else {
+                (1, get_size(path).unwrap_or(0))
+            };
             self.log
-                .add(format!("Skip {} files in {}", file_count, path.display()).as_str());
-            let size = get_size(path).unwrap_or(0);
+                .add(&format!("Skip {}, {} files", path.display(), file_count));
             self.progress.borrow_mut().update(file_count);
             let counter = TypeCounter::new();
             Ok(counter.count_skipped(file_count, size))
@@ -118,9 +124,8 @@ impl MyApp {
     }
 
     fn copy_file(&self, src_path: &Path) -> Result<TypeCounter> {
-        let src_meta = src_path.symlink_metadata()?;
         let counter = TypeCounter::new();
-        if src_meta.file_type().is_symlink() {
+        if is_symlink(src_path) {
             self.log
                 .add(&format!("Skip symbolic link \"{}\"", src_path.display()));
             Ok(counter.count_symlink())
@@ -134,7 +139,8 @@ impl MyApp {
                 .join(src_path.strip_prefix(&self.options.src)?);
             let dest_dir = dest_path.parent().unwrap();
             if dest_path.exists() {
-                let dest_meta = fs::metadata(&dest_path)?;
+                let src_meta = src_path.symlink_metadata()?;
+                let dest_meta = dest_path.symlink_metadata()?;
 
                 // If force-copy is not set, copy only newer files
                 if !self.options.force_copy {

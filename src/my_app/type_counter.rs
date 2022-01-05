@@ -87,7 +87,7 @@ impl Display for TypeCounter {
             f,
             "{:>6} file(s) copied,      size = {:>8}B
 {:>6} file(s) not updated, size = {:>8}B
-{:>6} item(s) skipped,     size = {:>8}B
+{:>6} file(s) skipped,     size = {:>8}B
 {:>6} symbolic link(s)",
             self.copied,
             SizeFormatterBinary::new(self.copied_size),
